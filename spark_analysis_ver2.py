@@ -10,8 +10,8 @@ from pyspark.sql import functions as F
 current_dir = os.path.dirname(os.path.abspath(__file__))
 save_path = os.path.join(current_dir, "raw_data")
 
-# Path to the PostgreSQL JDBC driver
-jdbc_driver_path = os.path.join(current_dir, "postgresql-42.2.18.jar")
+# Path to the SQLite JDBC driver
+jdbc_driver_path = os.path.join(current_dir, "sqlite-jdbc-3.36.0.3.jar")
 
 # Initialize Spark session with the JDBC driver
 spark = SparkSession.builder \
@@ -80,29 +80,17 @@ try:
     print("Sentiment scores:")
     sentiment_df.select("title", "sentiment").show()
 
-    """# Save sentiment data to a database (Example: PostgreSQL)
-    print("Saving sentiment data to the database...")
+    # Save sentiment data to a SQLite database
+    sqlite_url = "jdbc:sqlite:" + os.path.join(current_dir, "spark_streaming.db")
+    
+    # Write the DataFrame to SQLite
     sentiment_df.write \
         .format("jdbc") \
-        .option("url", "jdbc:postgresql://localhost:5432/spark_streaming") \
+        .option("url", sqlite_url) \
         .option("dbtable", "sentiment_analysis") \
-        .option("user", "carlosvarela") \
-        .option("password", "silueR$gh-938467") \
-        .option("driver", "org.postgresql.Driver") \
-        .mode("append") \
-        .save()"""
-    
-    # PostgreSQL connection properties
-    jdbc_url = "jdbc:postgresql://localhost:5432/spark_streaming"
-    connection_properties = {
-        "user": "carlosvarela",
-        "password": "silueR$gh-938467",
-        "driver": "org.postgresql.Driver"
-    }
-
-    # Write the DataFrame to PostgreSQL
-    sentiment_df.write \
-        .jdbc(url=jdbc_url, table="sentiment_analysis", mode="overwrite", properties=connection_properties)
+        .option("driver", "org.sqlite.JDBC") \
+        .mode("overwrite") \
+        .save()
 
     print("Analysis complete.")
 
