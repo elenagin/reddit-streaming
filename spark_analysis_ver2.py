@@ -10,14 +10,18 @@ from pyspark.sql import functions as F
 current_dir = os.path.dirname(os.path.abspath(__file__))
 save_path = os.path.join(current_dir, "raw_data")
 
-# Path to the SQLite JDBC driver
-jdbc_driver_path = os.path.join(current_dir, "sqlite-jdbc-3.36.0.3.jar")
+# Path to the SQLite JDBC driver and SLF4J API
+jdbc_driver_path = os.path.join(current_dir, "db_drivers/sqlite-jdbc-3.46.0.0.jar")
+slf4j_api_path = os.path.join(current_dir, "db_drivers/slf4j-api-1.7.36.jar")
 
-# Initialize Spark session with the JDBC driver
+# Initialize Spark session with the JDBC driver and SLF4J API
 spark = SparkSession.builder \
     .appName("RedditStreamingAnalysis") \
-    .config("spark.jars", jdbc_driver_path) \
+    .config("spark.jars", f"{jdbc_driver_path},{slf4j_api_path}") \
     .getOrCreate()
+
+print("JARs included in Spark context:")
+print(spark.sparkContext._conf.get("spark.jars"))
 
 try:
     # Read the raw data
@@ -93,7 +97,8 @@ try:
         .save()
 
     print("Analysis complete.")
-
+except Exception as e:
+    print('Howdy... looks like we have an error: ', e)
 finally:
     # Stop the Spark session
     print("Stopping the Spark session...")

@@ -1,1 +1,3 @@
 creds.sh
+raw_data/
+spark_streaming.db
