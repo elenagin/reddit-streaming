@@ -1,12 +1,20 @@
-# data_processing_client.py
+''' 
+Team Members:
+- Carlos Varela
+- Elena Ginebra
+- Matilde Bernocci
+- Rafael Braga
+'''
+
 import socket
 import json
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import col, from_unixtime
 from pyspark.sql.types import StructType, StructField, StringType, DoubleType
+import time
 
-# Initialize Spark session
-spark = SparkSession.builder.appName("RedditStreaming").getOrCreate()
+# Initialize a Spark session
+spark = SparkSession.builder.appName("reddit-streaming").getOrCreate()
 
 # Define the schema for the incoming data
 schema = StructType([
@@ -15,12 +23,16 @@ schema = StructType([
     StructField("text", StringType(), True)
 ])
 
+def save_to_disk(df, path="raw_data.parquet"):
+    df.write.mode("append").parquet(path)
+
 # Define the socket client
 def socket_client():
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     client_socket.connect(('localhost', 9999))
     
     buffer = ""
+    raw = spark.createDataFrame([], schema)  # Initialize an empty DataFrame
 
     while True:
         data = client_socket.recv(1024).decode('utf-8')
@@ -30,20 +42,27 @@ def socket_client():
         buffer += data
         while '\n' in buffer:
             line, buffer = buffer.split('\n', 1)
-            if line.strip():  # Ensure it's not an empty line
+            if line.strip():
                 post_data = json.loads(line)
                 
-                # Create a DataFrame from the received data
-                df = spark.createDataFrame([post_data], schema=schema)
+                # Append the new post data to the DataFrame
+                new_row = spark.createDataFrame([post_data], schema=schema)
+                raw = raw.union(new_row)
                 
-                # Ensure 'created_utc' is recognized as long type
-                df = df.withColumn("created_utc", col("created_utc").cast("long"))
+                # Convert 'created_utc' to long and human-readable date
+                raw = raw.withColumn("created_utc", col("created_utc").cast("long"))
+                raw = raw.withColumn("created_date", from_unixtime(col("created_utc")))
                 
-                # Convert 'created_utc' to human-readable date
-                df = df.withColumn("created_date", from_unixtime(col("created_utc")))
+                # Save the DataFrame to disk
+                save_to_disk(raw)
+
+                # Show the DataFrame (optional)
+                raw.show()
                 
-                # Process the DataFrame (you can add your processing steps here)
-                df.show()
+                # Reset raw DataFrame to avoid re-processing same data
+                raw = spark.createDataFrame([], schema)
+
+        time.sleep(10)  # Wait before checking for new data
 
     client_socket.close()
 
