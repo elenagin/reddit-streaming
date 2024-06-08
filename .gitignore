@@ -1,3 +1,4 @@
 creds.sh
-raw_data/
+raw_data.parquet/
+metrics_data.parquet/
 spark_streaming.db
