@@ -10,13 +10,14 @@ from pyspark.sql import functions as F
 current_dir = os.path.dirname(os.path.abspath(__file__))
 save_path = os.path.join(current_dir, "raw_data")
 
-# Path to the PostgreSQL JDBC driver
-jdbc_driver_path = os.path.join(current_dir, "postgresql-42.2.18.jar")
+# Path to the PostgreSQL JDBC driver and SLF4J API
+jdbc_driver_path = os.path.join(current_dir, "db_drivers/postgresql-42.2.18.jar")
+slf4j_api_path = os.path.join(current_dir, "db_drivers/slf4j-api-1.7.36.jar")
 
-# Initialize Spark session with the JDBC driver
+# Initialize Spark session with the JDBC driver and SLF4J API
 spark = SparkSession.builder \
     .appName("RedditStreamingAnalysis") \
-    .config("spark.jars", jdbc_driver_path) \
+    .config("spark.jars", f"{jdbc_driver_path},{slf4j_api_path}") \
     .getOrCreate()
 
 try:
@@ -80,7 +81,7 @@ try:
     print("Sentiment scores:")
     sentiment_df.select("title", "sentiment").show()
 
-    """# Save sentiment data to a database (Example: PostgreSQL)
+    # Save sentiment data to a database (Example: PostgreSQL)
     print("Saving sentiment data to the database...")
     sentiment_df.write \
         .format("jdbc") \
@@ -90,9 +91,9 @@ try:
         .option("password", "silueR$gh-938467") \
         .option("driver", "org.postgresql.Driver") \
         .mode("append") \
-        .save()"""
+        .save()
     
-    # PostgreSQL connection properties
+    """# PostgreSQL connection properties
     jdbc_url = "jdbc:postgresql://localhost:5432/spark_streaming"
     connection_properties = {
         "user": "carlosvarela",
@@ -102,9 +103,12 @@ try:
 
     # Write the DataFrame to PostgreSQL
     sentiment_df.write \
-        .jdbc(url=jdbc_url, table="sentiment_analysis", mode="overwrite", properties=connection_properties)
+        .jdbc(url=jdbc_url, table="sentiment_analysis", mode="overwrite", properties=connection_properties)"""
 
     print("Analysis complete.")
+
+except Exception as e:
+    print('Howdy, looks like we catched an error: ',e)
 
 finally:
     # Stop the Spark session
