@@ -17,15 +17,15 @@ def run_streamlit_app(app_name):
 print("Running data_fetching.py...")
 fetching_process = run_script('data_fetching_server.py')
 
-# Wait for 15 seconds
-time.sleep(15)
+# Wait for 3 seconds
+time.sleep(3)
 
 # Run the data processing script
 print("Running data_processing.py...")
 processing_process = run_script('data_processing_client.py')
 
-# Wait for 15 seconds
-time.sleep(15)
+# Wait for 10 seconds
+time.sleep(10)
 
 # Run the data analysis script
 print("Running data_analysis.py...")

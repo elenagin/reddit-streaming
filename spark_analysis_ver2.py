@@ -30,6 +30,7 @@ def process_data():
     new_data = raw_data.filter(F.col("created_date") > last_processed_time)
 
     if new_data.count() == 0:
+        print('Waiting for new data...')
         return
 
     # Update the last processed timestamp
@@ -48,6 +49,8 @@ def process_data():
         F.count("number_posts_referenced").alias("post_ref_count"),
         F.count("external_urls_referenced").alias("url_count")
     )
+
+    print('Obtaining metrics...')
 
     # Tokenize the text for TF-IDF:
     tokenizer = Tokenizer(inputCol="text", outputCol="words")
@@ -94,7 +97,7 @@ def process_data():
 
 # Initialize the last processed timestamp
 last_processed_time = spark.read.parquet('raw_data.parquet').agg(F.max("created_date")).collect()[0][0]
-
+print('Last post at: ',last_processed_time)
 # Continuously check for new data and process it
 while True:
     process_data()
