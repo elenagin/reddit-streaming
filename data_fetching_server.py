@@ -13,6 +13,9 @@ import socket
 import json
 import threading
 import time
+import warnings
+
+warnings.filterwarnings("ignore")
 
 # Load environment variables:
 env_file = 'creds.sh'

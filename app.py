@@ -1,5 +1,16 @@
+''' 
+Team Members:
+- Carlos Varela
+- Elena Ginebra
+- Matilde Bernocci
+- Rafael Braga
+'''
+
 import subprocess
 import time
+import warnings
+
+warnings.filterwarnings("ignore")
 
 def run_script(script_name):
     try:
@@ -32,11 +43,12 @@ print("Running data_analysis.py...")
 analysis_process = run_script('spark_analysis_ver2.py')
 
 # Wait for 15 seconds
-time.sleep(15)
+print('preparing to display metrics...')
+time.sleep(20)
 
 # Run the Streamlit app
-print("Running streamlit_app.py...")
-streamlit_process = run_streamlit_app('dashboard.py')
+print("Launching metrics dashboard...")
+streamlit_process = run_script('dashboard.py')
 
 print("All scripts have been started.")
 print("Monitoring scripts...")

@@ -1,9 +1,19 @@
+''' 
+Team Members:
+- Carlos Varela
+- Elena Ginebra
+- Matilde Bernocci
+- Rafael Braga
+'''
+
 import time
 from pyspark.sql import SparkSession, functions as F
 from pyspark.ml.feature import HashingTF, IDF, Tokenizer
 from pyspark.sql.window import Window
 from pyspark.sql.types import StructType, StructField, IntegerType, DoubleType, ArrayType
+import warnings
 
+warnings.filterwarnings("ignore")
 # Create a Spark session:
 spark = SparkSession \
     .builder \
@@ -23,15 +33,15 @@ to_array_udf = F.udf(to_array, ArrayType(StructType([
 def process_data():
     #global last_processed_time
     last_processed_time = '2024-06-02 12:57:19'
-    print('Last processed time: ',last_processed_time)
+    #print('Last processed time: ',last_processed_time)
 
     # Read raw data from folder and create a df:
     raw_data = spark.read.parquet('raw_data.parquet')
-    raw_data.show()
+    #raw_data.show()
 
     # Filter data that is not yet processed
     new_data = raw_data.filter(F.col("created_date") > last_processed_time)
-    new_data.show()
+    #new_data.show()
 
     if new_data.count() == 0:
         print('Waiting for new data...')

@@ -12,6 +12,9 @@ from pyspark.sql import SparkSession
 from pyspark.sql.functions import col, from_unixtime
 from pyspark.sql.types import StructType, StructField, StringType, DoubleType
 import time
+import warnings
+
+warnings.filterwarnings("ignore")
 
 # Initialize a Spark session:
 spark = SparkSession.builder.appName("reddit-streaming").getOrCreate()
@@ -57,7 +60,7 @@ def socket_client():
                 save_to_disk(raw)
 
                 # Show the DataFrame (optional):
-                raw.show()
+                #raw.show()
                 
                 # Reset raw DataFrame to avoid re-processing same data:
                 raw = spark.createDataFrame([], schema)

@@ -1,57 +1,75 @@
+''' 
+Team Members:
+- Carlos Varela
+- Elena Ginebra
+- Matilde Bernocci
+- Rafael Braga
+'''
+
 import streamlit as st
+import sqlite3
 import pandas as pd
-import pyarrow.parquet as pq
 import os
+import glob
 import time
 
-st.set_page_config(page_title="Reddit Metrics Dashboard", layout="wide")
+# Function to create SQLite database and table
+def create_database_and_table():
+    conn = sqlite3.connect('metrics.db')  
+    cursor = conn.cursor()
+    cursor.execute('''CREATE TABLE IF NOT EXISTS real_time_metrics 
+                      (window TIMESTAMP,
+                      user_ref_count INTEGER, post_ref_count INTEGER, 
+                      url_count INTEGER, top_words TEXT)''')
+    conn.commit()
+    conn.close()
 
-def read_new_metrics(metrics_path):
+# Function to read Parquet files and insert data into SQLite table
+def read_parquet_and_insert_to_db():
+    parquet_files = glob.glob('metrics_data.parquet/*.parquet')
+    if not parquet_files:
+        st.write("No Parquet files found. Waiting for data...")
+        return
+
+    for file in parquet_files:
+        df = pd.read_parquet(file)
+        conn = sqlite3.connect('metrics.db')  
+        df.to_sql('real_time_metrics', conn, if_exists='append', index=False)
+        conn.close()
+        st.write(f"Data from {file} inserted into database.")
+
+# Function to get the sum of values from the specified columns
+def get_sum_of_columns():
+    conn = sqlite3.connect('metrics.db')  
+    cursor = conn.cursor()
+    cursor.execute('''SELECT SUM(user_ref_count), SUM(post_ref_count), SUM(url_count) 
+                      FROM real_time_metrics''')
+    sums = cursor.fetchone()
+    conn.close()
+    return sums
+
+# Function to update and display the sum in real-time
+def update_sum():
     while True:
-        if os.path.exists(metrics_path):
-            break  # If metrics_path exists, exit the loop
-        else:
-            print(f"Waiting for metrics directory at {metrics_path} to be created...")
-            time.sleep(5)  # Wait for 5 seconds before retrying
-    
-    metrics_files = [os.path.join(metrics_path, f) for f in os.listdir(metrics_path) if f.endswith('.parquet')]
-    if not metrics_files:
-        return pd.DataFrame()
-    
-    df_list = [pq.read_table(file).to_pandas() for file in metrics_files]
-    df = pd.concat(df_list, ignore_index=True)
-    return df
+        sums = get_sum_of_columns()
+        st.write("Sum of user_ref_count:", sums[0])
+        st.write("Sum of post_ref_count:", sums[1])
+        st.write("Sum of url_count:", sums[2])
+        time.sleep(10)
 
-# Initialize an empty DataFrame to store metrics data
-metrics_df = pd.DataFrame()
+# Streamlit app
+def main():
+    st.title("Real-time Data from Parquet Files")
+    st.write("This app displays real-time data from Parquet files stored in the 'metrics_data.parquet' directory.")
 
-# Path to the metrics.parquet directory
-metrics_path = 'metrics_data.parquet'
+    # Create SQLite database and table
+    create_database_and_table()
 
-# Main loop to continuously check for new data
-while True:
-    new_data = read_new_metrics(metrics_path)
-    if not new_data.empty:
-        metrics_df = pd.concat([metrics_df, new_data], ignore_index=True)
-        metrics_df.drop_duplicates(inplace=True)
+    # Start reading Parquet files and inserting data into SQLite table
+    read_parquet_and_insert_to_db()
 
-        # Convert window column to string for proper plotting
-        metrics_df['window'] = metrics_df['window'].astype(str)
+    # Start updating and displaying sum in real-time
+    update_sum()
 
-        # Display cumulative counts over time
-        cumulative_df = metrics_df.groupby('window').agg({
-            'user_ref_count': 'sum',
-            'post_ref_count': 'sum',
-            'url_count': 'sum'
-        }).cumsum().reset_index()
-
-        st.line_chart(cumulative_df.set_index('window'))
-
-        # Display the most recent top_words
-        most_recent_window = metrics_df['window'].max()
-        recent_top_words = metrics_df[metrics_df['window'] == most_recent_window]['top_words'].values[0]
-
-        st.table(pd.DataFrame({'Top Words': recent_top_words}))
-
-    # Wait for some time before checking for new data
-    time.sleep(10)
+if __name__ == "__main__":
+    main()
