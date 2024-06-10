@@ -21,13 +21,17 @@ to_array_udf = F.udf(to_array, ArrayType(StructType([
 
 # Function to process data and update metrics
 def process_data():
-    global last_processed_time
+    #global last_processed_time
+    last_processed_time = '2024-06-02 12:57:19'
+    print('Last processed time: ',last_processed_time)
 
     # Read raw data from folder and create a df:
     raw_data = spark.read.parquet('raw_data.parquet')
+    raw_data.show()
 
     # Filter data that is not yet processed
     new_data = raw_data.filter(F.col("created_date") > last_processed_time)
+    new_data.show()
 
     if new_data.count() == 0:
         print('Waiting for new data...')
@@ -35,6 +39,7 @@ def process_data():
 
     # Update the last processed timestamp
     last_processed_time = new_data.agg(F.max("created_date")).collect()[0][0]
+    print('inside loop processed time:',last_processed_time)
 
     # Extract a specific group matched by a Java regex, from the specified string column for each metric:
     processed = new_data.withColumn('number_users_referenced', F.regexp_extract('text', r"(/u/\w+)", 0))
@@ -49,8 +54,6 @@ def process_data():
         F.count("number_posts_referenced").alias("post_ref_count"),
         F.count("external_urls_referenced").alias("url_count")
     )
-
-    print('Obtaining metrics...')
 
     # Tokenize the text for TF-IDF:
     tokenizer = Tokenizer(inputCol="text", outputCol="words")
@@ -96,8 +99,9 @@ def process_data():
     metrics.write.mode("append").parquet("metrics_data.parquet")
 
 # Initialize the last processed timestamp
-last_processed_time = spark.read.parquet('raw_data.parquet').agg(F.max("created_date")).collect()[0][0]
-print('Last post at: ',last_processed_time)
+last_processed_time = spark.read.parquet('raw_data.parquet').agg(F.min("created_date")).collect()[0][0]
+print('Last processed time: ',last_processed_time)
+
 # Continuously check for new data and process it
 while True:
     process_data()
