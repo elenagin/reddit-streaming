@@ -20,29 +20,35 @@ To get started with the Reddit Streaming project, follow these steps:
 
 Clone the repository:
 
-bash
+_bash_
 Copy code
-git clone https://github.com/elenagin/reddit-streaming.git
-cd reddit-streaming
+_git clone https://github.com/elenagin/reddit-streaming.git_
+_cd reddit-streaming_
 Install dependencies:
 
 Ensure you have Python installed on your machine.
 Install the required Python packages:
-bash
-Copy code
-pip install -r requirements.txt
-Configure API keys:
 
-Create a .env file in the root directory.
+
+_bash_
+Copy code
+_pip install -r requirements.txt_
+
+Configure API keys:
+Create a cred.sh file in the root directory.
 Add your Reddit API credentials to the cred.sh file:
-bash
+
+_bash_
 Copy code
 
 CLIENT_ID=your_client_id
 
+
 CLIENT_SECRET=your_client_secret
 
+
 USER_AGENT=your_user_agent
+
 
 ## Usage
 Start the data fetching server:
@@ -50,39 +56,26 @@ Start the data fetching server:
 _bash_
 _streamlit run app.py_
 
-This script will start fetching Reddit data and store it in a specified format for further processing.
+This script will start fetching Reddit data and store it in a specified format for further processing to later use the fetched data to generate insights and metrics. This will start a web-based dashboard where you can visualize the data and metrics.
 
-Run the data processing client:
-
-bash
-Copy code
-python data_processing_client.py
-This client will process the fetched data to generate insights and metrics.
-
-Launch the dashboard:
-
-bash
-Copy code
-streamlit run dashboard.py
-This will start a web-based dashboard where you can visualize the data and metrics.
 
 ## Project Structure
-app.py: Main application script.
-data_fetching_server.py: Script for fetching data from Reddit.
-data_processing_client.py: Client for processing the fetched data.
-dashboard.py: Streamlit dashboard for visualizing the data.
-requirements.txt: List of dependencies required for the project.
-spark_analysis.py: Scripts for data analysis using Apache Spark.
-hackathon.ipynb: Jupyter notebook used for prototyping and analysis.
+- app.py: Main application script.
+- data_fetching_server.py: Script for fetching data from Reddit.
+- data_processing_client.py: Client for processing the fetched data.
+- dashboard.py: Streamlit dashboard for visualizing the data.
+- requirements.txt: List of dependencies required for the project.
+- spark_analysis.py: Scripts for data analysis using Apache Spark.
+  
 
 ## Contributing
 We welcome contributions from the community! To contribute:
 
-Fork the repository.
-Create a new branch for your feature or bugfix.
-Commit your changes and push to your fork.
-Submit a pull request with a description of your changes.
-Please ensure your code adheres to the project's coding standards and includes tests where applicable.
+1. Fork the repository.
+2. Create a new branch for your feature or bugfix.
+3 Commit your changes and push to your fork.
+4. Submit a pull request with a description of your changes.
+_Please ensure your code adheres to the project's coding standards and includes tests where applicable._
 
 ---
 ## License
