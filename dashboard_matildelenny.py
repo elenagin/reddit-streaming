@@ -17,17 +17,7 @@ st.header('💁🏻‍♀️ :violet[Female Fashion] Advice ')
 st.caption("Find below some live metrics regarding :violet[Female Fashion] Advice posts on reddit.")
 
 
-# # Define the folder path
-# folder_path = '/Users/lenn/Desktop/BTS/RDA - Real-time Data Analysis/metrics_data.parquet/'
 
-# # List all parquet files in the folder
-# parquet_files = [os.path.join(folder_path, f) for f in os.listdir(folder_path) if f.endswith('.parquet')]
-
-# # Load all parquet files into a single DataFrame
-# df_list = []
-# for file in parquet_files:
-#     table = pq.read_table(file)
-#     df_list.append(table.to_pandas())
 
 # # Concatenate all DataFrames
 # combined_df = pd.concat(df_list, ignore_index=True)
@@ -69,15 +59,19 @@ def load_data(filepath):
         st.error(f"Error loading data: {e}")
         return pd.DataFrame()
 
-# Paths to the Parquet files
-parquet_files = [
-    'metrics_data.parquet/part-00000-82dad062-a401-45c8-ae31-95f63edd30c1-c000.snappy.parquet',
-    'metrics_data.parquet/part-00000-436be57b-f84d-45a0-84f0-6a84375441b5-c000.snappy.parquet',
-    'metrics_data.parquet/part-00000-cc041379-e338-4b8f-8fe6-b841c204d711-c000.snappy.parquet'
-]
+# Define the folder path
+folder_path = '/Users/lenn/Desktop/BTS/RDA - Real-time Data Analysis/metrics_data.parquet/'
+# List all parquet files in the folder
+parquet_files = [os.path.join(folder_path, f) for f in os.listdir(folder_path) if f.endswith('.parquet')]
+# Load all parquet files into a single DataFrame
+dfs = []
+
+for file in parquet_files:
+    table = pq.read_table(file)
+    dfs.append(table.to_pandas())
+
 
 # Load and combine the data
-dfs = [load_data(file) for file in parquet_files]
 data = pd.concat(dfs, ignore_index=True)
 
 # Debugging step to verify the data columns
