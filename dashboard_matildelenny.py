@@ -12,13 +12,6 @@ import sqlite3
 import pandas as pd
 import time
 
-# Display the combined DataFrame and metrics in a Streamlit dashboard
-st.image('reddit.png', width=200)
-st.title(':orange[Reddit] Metrics Dashboard ')
-st.write("By Matilde Bernocchi, Carlos Varela, Rafael Braga and Elena Ginebra")
-
-st.header('💁🏻‍♀️ :violet[Female Fashion] Advice ')
-st.caption("Find below some live metrics regarding :violet[Female Fashion] Advice posts on reddit.")
 
 # Function to get metrics from the SQLite database
 def get_metrics(db_name):
@@ -37,7 +30,13 @@ def compute_metrics(df):
 
 # Main function for the Streamlit app
 def main():
-    st.title("Reddit Streaming Metrics")
+    st.image('reddit.png', width=200)
+    st.title(':orange[Reddit] Metrics Dashboard ')
+    st.write("By Matilde Bernocchi, Carlos Varela, Rafael Braga and Elena Ginebra")
+
+    st.header('💁🏻‍♀️ :violet[Female Fashion] Advice ')
+    st.caption("Find below some live metrics regarding :violet[Female Fashion] Advice posts on reddit.")
+
 
     placeholder = st.empty()
 
@@ -58,28 +57,6 @@ def main():
 
         # Wait for 5 seconds before updating
         time.sleep(5)
-
-
-# # Concatenate all DataFrames
-# combined_df = pd.concat(df_list, ignore_index=True)
-
-# # Calculate some example metrics
-# total_rows = combined_df.shape[0]
-# total_columns = combined_df.shape[1]
-# summary_stats = combined_df.describe().to_dict()
-
-# # Display metrics
-# st.header('Metrics')
-# st.metric(label="Total Rows", value=total_rows)
-# st.metric(label="Total Columns", value=total_columns)
-
-# # Display summary statistics
-# st.header('Summary Statistics')
-# st.json(summary_stats)
-
-# # Display the DataFrame
-# st.header('Data Table')
-# st.dataframe(combined_df)
 
 # Function to load data
 @st.cache_data(ttl=60)
@@ -170,3 +147,6 @@ if not data.empty:
         st.experimental_rerun()
 else:
     st.error("No data available or the 'timestamp' column is missing.")
+
+if __name__ == "__main__":
+    main()

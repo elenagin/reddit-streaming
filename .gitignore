@@ -1,4 +1,4 @@
 creds.sh
 metrics_data.parquet/
 raw_data.parquet/
-spark_streaming.db
+reddit_streaming.db
