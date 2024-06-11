@@ -37,16 +37,19 @@ Create a .env file in the root directory.
 Add your Reddit API credentials to the cred.sh file:
 bash
 Copy code
+
 CLIENT_ID=your_client_id
+
 CLIENT_SECRET=your_client_secret
+
 USER_AGENT=your_user_agent
 
 ## Usage
 Start the data fetching server:
 
-bash
-Copy code
-python data_fetching_server.py
+_bash_
+_streamlit run app.py_
+
 This script will start fetching Reddit data and store it in a specified format for further processing.
 
 Run the data processing client:
