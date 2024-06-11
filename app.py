@@ -28,19 +28,19 @@ def run_streamlit_app(app_name):
 print("Running data_fetching.py...")
 fetching_process = run_script('data_fetching_server.py')
 
-# Wait for 3 seconds
-time.sleep(3)
-
-# Run the data processing script
-print("Running data_processing.py...")
-processing_process = run_script('data_processing_client.py')
-
 # Wait for 10 seconds
 time.sleep(10)
 
+# Run the data processing script
+print("Extracting data from API and beginning processing...")
+processing_process = run_script('data_processing_client.py')
+
+# Wait for 10 seconds
+time.sleep(15)
+
 # Run the data analysis script
-print("Running data_analysis.py...")
-analysis_process = run_script('spark_analysis_ver2.py')
+print("Running Metrics ETL pipeline...")
+analysis_process = run_script('metrics_etl.py')
 
 # Wait for 15 seconds
 print('preparing to display metrics...')
@@ -48,7 +48,7 @@ time.sleep(20)
 
 # Run the Streamlit app
 print("Launching metrics dashboard...")
-streamlit_process = run_script('dashboard.py')
+streamlit_process = run_streamlit_app('dashboard_matildelenny.py')
 
 print("All scripts have been started.")
 print("Monitoring scripts...")
