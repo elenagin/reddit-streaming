@@ -48,7 +48,7 @@ time.sleep(20)
 
 # Run the Streamlit app
 print("Launching metrics dashboard...")
-streamlit_process = run_streamlit_app('dashboard_matildelenny.py')
+streamlit_process = run_streamlit_app('dashboard.py')
 
 print("All scripts have been started.")
 print("Monitoring scripts...")

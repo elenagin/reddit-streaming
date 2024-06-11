@@ -68,7 +68,7 @@ def handle_client(client_socket):
                     print(post_data)  # Verify the data before sending!
                     client_socket.sendall((json.dumps(post_data) + '\n').encode('utf-8'))
 
-            time.sleep(60)  # Wait for 1 minute before checking for new posts...
+            time.sleep(10)  # Wait for 1 minute before checking for new posts...
     except (ConnectionResetError, BrokenPipeError):
         print("Connection has been closed.")
     finally:

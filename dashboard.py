@@ -21,9 +21,9 @@ def get_metrics(db_name):
 
 # Function to compute metrics
 def compute_metrics(df):
-    num_users_mentioned = df['user_ref_count'].sum()
-    num_posts_mentioned = df['post_ref_count'].sum()
-    num_urls_mentioned = df['url_count'].sum()
+    num_users_mentioned = df['mentioned_users'].sum()
+    num_posts_mentioned = df['referenced_posts'].sum()
+    num_urls_mentioned = df['urls_shared'].sum()
     return num_users_mentioned, num_posts_mentioned, num_urls_mentioned
 
 # Main function for the Streamlit app
@@ -41,8 +41,8 @@ def main():
             # Display metrics
             with placeholder.container():
                 st.metric("Number of Users Mentioned", num_users_mentioned)
-                st.metric("Number of Posts Mentioned", num_posts_mentioned)
-                st.metric("Number of URLs Mentioned", num_urls_mentioned)
+                st.metric("Number of Posts referenced", num_posts_mentioned)
+                st.metric("Number of URLs shared", num_urls_mentioned)
 
         except (sqlite3.OperationalError, pd.io.sql.DatabaseError) as e:
             st.warning("Database not found. Waiting for the database to be created...")

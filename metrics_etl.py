@@ -1,25 +1,24 @@
+'''
+Team Members:
+- Carlos Varela
+- Elena Ginebra
+- Matilde Bernocci
+- Rafael Braga
+'''
+
 import time
 import json
 import sqlite3
 from pyspark.sql import SparkSession, functions as F
-from pyspark.ml.feature import HashingTF, IDF, Tokenizer
-from pyspark.sql.window import Window
-from pyspark.sql.types import StructType, StructField, IntegerType, DoubleType, ArrayType
+import re
+from pyspark.sql.functions import udf
+from pyspark.sql.types import ArrayType, StringType
 import warnings
 
 warnings.filterwarnings("ignore")
 
 # Create a Spark session
 spark = SparkSession.builder.appName('reddit-streaming').getOrCreate()
-
-# Define a UDF to convert features to an array of (index, value) pairs
-def to_array(v):
-    return [(i, float(v[i])) for i in range(len(v.toArray()))]
-
-to_array_udf = F.udf(to_array, ArrayType(StructType([
-    StructField("index", IntegerType(), False),
-    StructField("value", DoubleType(), False)
-])))
 
 # Function to save metrics to SQLite database
 def save_to_sqlite(df, db_name, table_name):
@@ -30,117 +29,87 @@ def save_to_sqlite(df, db_name, table_name):
     # Create the table if it does not exist
     cursor.execute(f"""
     CREATE TABLE IF NOT EXISTS {table_name} (
-        window_start TEXT,
-        window_end TEXT,
-        user_ref_count INTEGER,
-        post_ref_count INTEGER,
-        url_count INTEGER,
-        top_words TEXT,
-        PRIMARY KEY (window_start, window_end)
+        mentioned_users INTEGER,
+        referenced_posts INTEGER,
+        urls_shared INTEGER
     )
     """)
     
     # Prepare the data for insertion, converting lists to JSON strings
     data = df.rdd.map(lambda row: (
-        row.window.start,
-        row.window.end,
-        row.user_ref_count,
-        row.post_ref_count,
-        row.url_count,
-        json.dumps(row.top_words)
+        row.mentioned_users,
+        row.referenced_posts,
+        row.urls_shared
     )).collect()
 
     # Insert the data into the table, replacing duplicates
     cursor.executemany(f"""
-    INSERT OR REPLACE INTO {table_name} (window_start, window_end, user_ref_count, post_ref_count, url_count, top_words)
-    VALUES (?, ?, ?, ?, ?, ?)
+    INSERT OR REPLACE INTO {table_name} (mentioned_users, referenced_posts, urls_shared)
+    VALUES (?, ?, ?)
     """, data)
 
     conn.commit()
     conn.close()
 
+# Initialize the last processed timestamp
+last_processed_time = '2024-01-01 00:00:00'
+
 # Function to process data and update metrics
 def process_data():
+    global last_processed_time
+
     # Read raw data from folder and create a DataFrame
     raw_data = spark.read.parquet('raw_data.parquet')
 
-    # Initialize the last processed timestamp
-    last_processed_time = '2024-01-01 00:000:00'
+    # Filter data based on last processed timestamp
     new_data = raw_data.filter(F.col("created_date") > last_processed_time)
+    print(new_data)
 
     if new_data.count() == 0:
         print('Waiting for new data...')
         return
 
     # Update the last processed timestamp
-    last_processed_time = new_data.agg(F.max("created_date")).collect()[0][0]
+    #last_processed_time = new_data.agg(F.max("created_date")).collect()[0][0]
+    last_processed_time = new_data.agg(F.min("created_date")).collect()[0][0]
     print('inside loop processed time:', last_processed_time)
 
-    # Extract a specific group matched by a Java regex, from the specified string column for each metric
-    processed = new_data.withColumn('number_users_referenced', F.regexp_extract('text', r"(/u/\w+)", 0))
-    processed = processed.withColumn('number_posts_referenced', F.regexp_extract('text', r"(/r/\w+)", 0))
-    processed = processed.withColumn("external_urls_referenced", F.regexp_extract("text", r"(http[s]?://\S+)", 0))
+    # Define functions to extract mentions, subreddits, and URLs
+    def extract_mentions(text):
+        return re.findall(r'/u/(\w+)', text)
 
-    # Count occurrences in 60-second windows, sliding every 5 seconds
-    windowed_counts = processed.groupBy(
-        F.window("created_date", "60 seconds", "5 seconds")
-    ).agg(
-        F.count("number_users_referenced").alias("user_ref_count"),
-        F.count("number_posts_referenced").alias("post_ref_count"),
-        F.count("external_urls_referenced").alias("url_count")
-    )
+    def extract_subreddits(text):
+        return re.findall(r'/r/(\w+)', text)
 
-    # Tokenize the text for TF-IDF
-    tokenizer = Tokenizer(inputCol="text", outputCol="words")
-    words_data = tokenizer.transform(processed)
+    def extract_urls(text):
+        return re.findall(r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+', text)
 
-    # Apply TF
-    hashing_tf = HashingTF(inputCol="words", outputCol="raw_features", numFeatures=20000)
-    featurized_data = hashing_tf.transform(words_data)
+    # Register UDFs
+    extract_mentions_udf = udf(extract_mentions, ArrayType(StringType()))
+    extract_subreddits_udf = udf(extract_subreddits, ArrayType(StringType()))
+    extract_urls_udf = udf(extract_urls, ArrayType(StringType()))
 
-    # Compute the IDF
-    idf = IDF(inputCol="raw_features", outputCol="features")
-    idf_model = idf.fit(featurized_data)
-    rescaled_data = idf_model.transform(featurized_data)
+    # Apply UDFs to extract mentions, subreddits, and URLs
+    new_data = new_data.withColumn("mentions", extract_mentions_udf(new_data["text"]))
+    new_data = new_data.withColumn("subreddits", extract_subreddits_udf(new_data["text"]))
+    new_data = new_data.withColumn("urls", extract_urls_udf(new_data["text"]))
 
-    # Add window column to rescaled_data
-    rescaled_data = rescaled_data.withColumn("window", F.window("created_date", "60 seconds", "5 seconds"))
+    # Count unique users, subreddits, and URLs
+    unique_users_count = new_data.selectExpr("explode(mentions) as user").select("user").distinct().count()
+    unique_subreddits_count = new_data.selectExpr("explode(subreddits) as subreddit").select("subreddit").distinct().count()
+    unique_urls_count = new_data.selectExpr("explode(urls) as url").select("url").distinct().count()
 
-    # Convert TF-IDF features to an array of (index, value) pairs
-    rescaled_data = rescaled_data.withColumn("features_array", to_array_udf(F.col("features")))
-
-    # Explode the features_array into individual rows
-    exploded_data = rescaled_data.select("window", "words", F.explode("features_array").alias("feature"))
-
-    # Define a window specification
-    window_spec = Window.partitionBy("window").orderBy(F.desc("feature.value"))
-
-    # Add row numbers to each word within the window, ordered by TF-IDF score
-    ranked_data = exploded_data.withColumn("rank", F.row_number().over(window_spec))
-
-    # Filter out the top 10 words for each window
-    top_words = ranked_data.filter(ranked_data["rank"] <= 10)
-
-    # Aggregate the top words back into a list for each window
-    top_words_agg = top_words.groupBy("window").agg(F.collect_list("words").alias("top_words"))
-
-    # Join the counts and top words data into a single metrics DataFrame
-    metrics = windowed_counts.join(top_words_agg, "window")
-
-    # Show the metrics DataFrame
+    metrics_dict = [{
+        'mentioned_users': unique_users_count,
+        'referenced_posts': unique_subreddits_count,
+        'urls_shared': unique_urls_count
+    }]
+    
+    metrics = spark.createDataFrame(metrics_dict)
     metrics.show()
-
-    # Save metrics to Parquet
-    metrics.write.mode("append").parquet("metrics_data.parquet")
-
-    # Save metrics to SQLite
     save_to_sqlite(metrics, 'reddit_streaming.db', 'metrics')
-
-# Initialize the last processed timestamp
-last_processed_time = spark.read.parquet('raw_data.parquet').agg(F.min("created_date")).collect()[0][0]
-print('Last processed time: ', last_processed_time)
 
 # Continuously check for new data and process it
 while True:
     process_data()
-    time.sleep(10)  # Wait before checking for new data
+    time.sleep(5)  # Wait before checking for new data
