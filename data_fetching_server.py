@@ -38,7 +38,7 @@ header_auth = {'Authorization': f"bearer {TOKEN}"}
 headers = {**header_ua, **header_auth}
 
 # Function to fetch posts from a subreddit:
-def fetch_posts(subreddit='femalefashionadvice'):
+def fetch_posts(subreddit='wallstreetbets'):#wallstreetbets
     res_posts = requests.get(f"https://oauth.reddit.com/r/{subreddit}/hot", headers=headers)
     posts = res_posts.json().get('data', {}).get('children', [])
     return posts
@@ -68,7 +68,7 @@ def handle_client(client_socket):
                     print(post_data)  # Verify the data before sending!
                     client_socket.sendall((json.dumps(post_data) + '\n').encode('utf-8'))
 
-            time.sleep(10)  # Wait for 1 minute before checking for new posts...
+            time.sleep(60)  # Wait for 1 minute before checking for new posts...
     except (ConnectionResetError, BrokenPipeError):
         print("Connection has been closed.")
     finally:
