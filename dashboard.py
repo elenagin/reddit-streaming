@@ -52,10 +52,10 @@ def main():
 
         except (sqlite3.OperationalError, pd.io.sql.DatabaseError) as e:
             st.warning("Waiting for database")
-            time.sleep(10)
+            time.sleep(15)
 
         # Wait for 5 seconds before updating
-        time.sleep(5)
+        time.sleep(1)
 
 if __name__ == "__main__":
     main()

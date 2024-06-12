@@ -26,14 +26,14 @@ def run_streamlit_app(app_name):
 
 # Run the data fetching script
 print("Running data_fetching.py...")
-fetching_process = run_script('data_fetching_server.py')
+fetching_process = run_script('streaming_server.py')
 
 # Wait for 10 seconds
-time.sleep(10)
+time.sleep(5)
 
 # Run the data processing script
 print("Extracting data from API and beginning processing...")
-processing_process = run_script('data_processing_client.py')
+processing_process = run_script('streaming_consumer.py')
 
 # Wait for 10 seconds
 time.sleep(15)

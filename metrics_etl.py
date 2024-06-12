@@ -59,7 +59,7 @@ def save_to_sqlite(df, db_name, table_name):
     conn.close()
 
 # Initialize the last processed timestamp
-last_processed_time = '2024-01-01 00:00:00'
+last_processed_time = '2020-01-01 00:00:00'
 
 def process_data():
     global last_processed_time
@@ -68,8 +68,6 @@ def process_data():
     try:
         raw_data = spark.read.parquet('raw_data.parquet')
     except Exception as e:
-        print('waiting for database')
-        time.sleep(10)
         return 
 
     # Filter data based on last processed timestamp
@@ -81,7 +79,7 @@ def process_data():
         return
 
     # Update the last processed timestamp
-    last_processed_time = new_data.agg(F.min("created_date")).collect()[0][0]
+    last_processed_time = new_data.agg(F.max("created_date")).collect()[0][0]
     print('inside loop processed time:', last_processed_time)
 
     # Define functions to extract mentions, subreddits, and URLs
@@ -136,4 +134,4 @@ def process_data():
 # Continuously check for new data and process it
 while True:
     process_data()
-    time.sleep(5)  # Wait before checking for new data
+    time.sleep(1)  # Wait before checking for new data
