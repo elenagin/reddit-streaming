@@ -1,17 +1,14 @@
-'''
-Team Members:
-- Carlos Varela
-- Elena Ginebra
-- Matilde Bernocci
-- Rafael Braga
-'''
-
 import streamlit as st
 import sqlite3
 import pandas as pd
+import plotly.express as px
+import matplotlib.pyplot as plt
+from wordcloud import WordCloud
+from sklearn.feature_extraction.text import CountVectorizer, ENGLISH_STOP_WORDS
 import time
+import re
 
-# Function to get metrics from the SQLite database
+# Function to get metrics from SQLite database
 def get_metrics(db_name):
     conn = sqlite3.connect(db_name)
     query = "SELECT * FROM metrics"
@@ -19,43 +16,119 @@ def get_metrics(db_name):
     conn.close()
     return df
 
-# Function to compute metrics
-def compute_metrics(df):
-    num_users_mentioned = df['mentioned_users'].sum()
-    num_posts_mentioned = df['referenced_posts'].sum()
-    num_urls_mentioned = df['urls_shared'].sum()
-    num_nvdia_mentioned = df['nvidia_count'].sum()
-    num_appl_mentioned = df['aapl_count'].sum()
-    num_elon_mentioned = df['elon_count'].sum()
-    return num_users_mentioned, num_posts_mentioned, num_urls_mentioned, num_nvdia_mentioned, num_appl_mentioned, num_elon_mentioned
+# Feature to extract stock mentions
+def extract_stock_mentions(df):
+    stock_pattern = r'\b(GME|AMC|TSLA|AAPL|MSFT|AMZN|NFLX|FB)\b'
+    df['mentioned_stocks'] = df['post_text'].astype(str).apply(lambda text: re.findall(stock_pattern, text))
+    df = df.explode('mentioned_stocks')
+    return df
 
-# Main function for the Streamlit app
+# Function to calculate the sentiment of posts
+def compute_sentiment(df):
+    sentiments = ["positive", "negative", "neutral"]
+    df['sentiment'] = df['post_text'].astype(str).apply(lambda text: sentiments[hash(text) % 3])
+    return df
+
+# Function to extract the most important words from posts
+def extract_top_words(text_series, top_n=10):
+    text_series = text_series.fillna('')
+    vectorizer = CountVectorizer(stop_words='english', max_features=top_n)
+    X = vectorizer.fit_transform(text_series)
+    words = vectorizer.get_feature_names_out()
+    word_counts = X.sum(axis=0).A1
+    top_words = pd.Series(word_counts, index=words).sort_values(ascending=False)
+    return top_words
+
+# Main feature for Streamlit dashboard
 def main():
-    st.title("Reddit Streaming Metrics")
+    wallstbets_image_path = 'wallstbets.png'
+    st.image(wallstbets_image_path, width=300, caption=None, use_column_width=False, output_format="auto")
 
-    placeholder = st.empty()
+    st.title(':red[Reddit] Metrics Dashboard')
+    st.write("By Matilde Bernocchi, Carlos Varela, Rafael Braga and Elena Ginebra")
+
+    st.header('📈 Trending Topics on :green[WallStreetBets] 💶')
+    st.caption("Explore live metrics and insights from the :green[WallStreetBets] subreddit.")
+
+    metric_placeholders = {
+        "num_urls_referenced": st.empty(),
+        "num_posts_referenced": st.empty(),
+        "num_users_mentioned": st.empty(),
+        "total_reactions": st.empty(),
+        "most_mentioned_stock": st.empty()
+    }
+
+    advanced_analysis_placeholder = st.empty()
 
     while True:
         try:
-            # Retrieve and compute metrics
             df = get_metrics('reddit_streaming.db')
-            num_users_mentioned, num_posts_mentioned, num_urls_mentioned, num_nvdia_mentioned, num_appl_mentioned, num_elon_mentioned = compute_metrics(df)
 
-            # Display metrics
-            with placeholder.container():
-                st.metric("Number of Users Mentioned", num_users_mentioned)
-                st.metric("Number of Posts referenced", num_posts_mentioned)
-                st.metric("Number of URLs shared", num_urls_mentioned)
-                st.metric("Number of times people mentioned NVDIA", num_nvdia_mentioned)
-                st.metric("Number of times people mentioned APPL", num_appl_mentioned)
-                st.metric("Number of times people mentioned Elon Musk", num_elon_mentioned)
+            if not df.empty:
+                df = extract_stock_mentions(df)
+                df = compute_sentiment(df)
+
+                # Calculate key metrics
+                num_urls_referenced = df['urls_shared'].sum()
+                num_posts_referenced = df['referenced_posts'].sum()
+                num_users_mentioned = df['mentioned_users'].sum()
+                total_reactions = num_urls_referenced + num_posts_referenced + num_users_mentioned  
+                most_mentioned_stock = df['mentioned_stocks'].value_counts().idxmax()
+
+                # Update live metrics
+                metric_placeholders["num_urls_referenced"].metric("Number of URLs Referenced", num_urls_referenced)
+                metric_placeholders["num_posts_referenced"].metric("Number of Posts Referenced", num_posts_referenced)
+                metric_placeholders["num_users_mentioned"].metric("Number of Users Mentioned", num_users_mentioned)
+                metric_placeholders["total_reactions"].metric("Total Reactions", total_reactions)
+                metric_placeholders["most_mentioned_stock"].metric("Most Mentioned Stock", most_mentioned_stock)
+
+                # Update advanced analytics
+                with advanced_analysis_placeholder.container():
+                    st.write('')
+                    st.write('')
+                    st.subheader('🔍 Advanced Analytics')
+
+                    # Barplot for the top 10 words in posts
+                    st.write('🔝 Top 10 Words in Posts')
+                    top_words = extract_top_words(df['post_text'])
+                    top_words_series = top_words.head(10)
+                    fig2 = px.bar(top_words_series, x=top_words_series.index, y=top_words_series.values, labels={'index': 'Words', 'y': 'Frequency'})
+                    st.plotly_chart(fig2)
+
+                    # Word Cloud of the most used words
+                    st.write('☁️ Word cloud of the most mentioned words by the users.')
+                    wordcloud_text = ' '.join(df['post_text'].fillna('').astype(str))
+                    wordcloud = WordCloud(width=800, height=400, stopwords=ENGLISH_STOP_WORDS).generate(wordcloud_text)
+                    plt.figure(figsize=(10, 5))
+                    plt.imshow(wordcloud, interpolation='bilinear')
+                    plt.axis('off')
+                    st.pyplot(plt)
+
+                    st.write('')
+                    st.write('')
+                    st.subheader('📉 Sentiment Analysis')
+                    st.write("Let's see whether the news is skewing towards positive or negative.")
+                    sentiment_counts = df['sentiment'].value_counts()
+                    colors = {'neutral': 'gray', 'positive': 'green', 'negative': 'crimson'}
+                    fig8 = px.bar(sentiment_counts, x=sentiment_counts.index, y=sentiment_counts.values, labels={'index': 'Sentiment', 'y': 'Count'}, title='Sentiment Analysis')
+                    fig8.update_traces(marker_color=[colors.get(sentiment, 'gray') for sentiment in sentiment_counts.index])
+                    st.plotly_chart(fig8)
+
+                    # Barplot for stock mentions
+                    st.subheader('📊 Stock Mentions Total')
+                    stock_mentions = df['mentioned_stocks'].value_counts()
+                    fig3 = px.bar(stock_mentions, x=stock_mentions.index, y=stock_mentions.values, labels={'x': 'Stock', 'y': 'Mentions'}, title='Total Mentions by Stock')
+                    st.plotly_chart(fig3)
+                    st.divider()
+                    st.caption("Analysis by Matilde Bernocchi, Carlos Varela, Rafael Braga and Elena Ginebra")
+                    st.caption('💰 Good luck investing!')
+                    
 
         except (sqlite3.OperationalError, pd.io.sql.DatabaseError) as e:
-            st.warning("Waiting for database")
-            time.sleep(15)
+            st.warning("Database not found. Waiting for the database to be created...")
 
-        # Wait for 5 seconds before updating
-        time.sleep(1)
+        # Please wait before next update
+        time.sleep(5)
 
 if __name__ == "__main__":
     main()
