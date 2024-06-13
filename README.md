@@ -2,9 +2,9 @@
 Welcome to the Reddit Streaming project! This repository provides tools and scripts for streaming, processing, and analyzing Reddit data in real-time. The project is designed for developers interested in exploring and utilizing Reddit data for various analytical and monitoring purposes.
 
 ### Features
-- Real-Time Data Fetching: Stream Reddit data in real-time using the Reddit API.
-- Data Processing: Process and analyze data to extract useful insights.
-- Dashboard Visualization: Visualize metrics and trends using a web-based dashboard.
+- Real-Time Data Fetching: Stream Reddit data in real-time using the PRAW SubredditStream library.
+- Data Processing: Stream data through sockets, process, and analyze it to extract useful insights.
+- Dashboard Visualization: Visualize metrics and trends using a web-based dashboard in near real-time.
 - Scalable Architecture: Built with scalability in mind, allowing for large-scale data handling.
 
 ### Table of Contents
@@ -51,21 +51,21 @@ USER_AGENT=your_user_agent
 
 
 ## Usage
-Start the data fetching server:
+Start the app:
 
 _bash_
 _streamlit run app.py_
 
-This script will start fetching Reddit data and store it in a specified format for further processing to later use the fetched data to generate insights and metrics. This will start a web-based dashboard where you can visualize the data and metrics.
+This script manages and runs multiple scripts through processes. App.py will start by running the streaming_consumer.py script. Then, it will run streaming_consumer.py which will receive the Reddit data and store it in a parquet format for further processing. After that, it will run metrics_etl.py which will extract data from the raw_data.parquet directory, process it with pyspark to compute metrics, and store it in a sqlite database. This will start a web-based dashboard where you can visualize the data and metrics using streamlit.
 
 
 ## Project Structure
 - app.py: Main application script.
-- data_fetching_server.py: Script for fetching data from Reddit.
-- data_processing_client.py: Client for processing the fetched data.
+- streaming_producer.py: Script for fetching data from Reddit.
+- streaming_consumer.py: Client for storing the fetched data.
+- metrics_etl.py: ETL pipeline to generate metrics with pyspark and store them in a db.
 - dashboard.py: Streamlit dashboard for visualizing the data.
 - requirements.txt: List of dependencies required for the project.
-- spark_analysis.py: Scripts for data analysis using Apache Spark.
   
 
 ## Contributing
@@ -73,7 +73,7 @@ We welcome contributions from the community! To contribute:
 
 1. Fork the repository.
 2. Create a new branch for your feature or bugfix.
-3 Commit your changes and push to your fork.
+3. Commit your changes and push to your fork.
 4. Submit a pull request with a description of your changes.
 _Please ensure your code adheres to the project's coding standards and includes tests where applicable._
 
