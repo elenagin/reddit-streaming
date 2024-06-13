@@ -1,3 +1,11 @@
+''' 
+Team Members:
+- Carlos Varela
+- Elena Ginebra
+- Matilde Bernocci
+- Rafael Braga
+'''
+
 import streamlit as st
 import sqlite3
 import pandas as pd

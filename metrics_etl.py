@@ -1,3 +1,11 @@
+''' 
+Team Members:
+- Carlos Varela
+- Elena Ginebra
+- Matilde Bernocci
+- Rafael Braga
+'''
+
 import time
 import re
 import sqlite3

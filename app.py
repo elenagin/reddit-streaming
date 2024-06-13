@@ -25,14 +25,14 @@ def run_streamlit_app(app_name):
         print(f"Error running Streamlit app {app_name}: {e}")
 
 # Run the data fetching script
-print("Running data_fetching.py...")
+print("Running streaming producer")
 fetching_process = run_script('streaming_server.py')
 
 # Wait for 10 seconds
 time.sleep(5)
 
 # Run the data processing script
-print("Extracting data from API and beginning processing...")
+print("Extracting data from subreddit...")
 processing_process = run_script('streaming_consumer.py')
 
 # Wait for 10 seconds
