@@ -59,10 +59,12 @@ def main():
     }
 
     advanced_analysis_placeholder = st.empty()
+    error_placeholder = st.empty()  # Placeholder for the error message
 
     while True:
         try:
             df = get_metrics('reddit_streaming.db')
+            error_placeholder.empty()  # Clear any previous error messages
 
             if not df.empty:
                 df = extract_stock_mentions(df)
@@ -73,7 +75,16 @@ def main():
                 num_posts_referenced = df['referenced_posts'].sum()
                 num_users_mentioned = df['mentioned_users'].sum()
                 total_reactions = num_urls_referenced + num_posts_referenced + num_users_mentioned  
-                most_mentioned_stock = df['mentioned_stocks'].value_counts().idxmax()
+
+                # Check if 'mentioned_stocks' has valid data
+                if 'mentioned_stocks' in df.columns and df['mentioned_stocks'].notna().any():
+                    value_counts = df['mentioned_stocks'].value_counts()
+                    if not value_counts.empty:
+                        most_mentioned_stock = value_counts.idxmax()
+                    else:
+                        most_mentioned_stock = "No data"
+                else:
+                    most_mentioned_stock = "No data"
 
                 # Update live metrics
                 metric_placeholders["num_urls_referenced"].metric("Number of URLs Referenced", num_urls_referenced)
@@ -98,11 +109,15 @@ def main():
                     # Word Cloud of the most used words
                     st.write('☁️ Word cloud of the most mentioned words by the users.')
                     wordcloud_text = ' '.join(df['post_text'].fillna('').astype(str))
-                    wordcloud = WordCloud(width=800, height=400, stopwords=ENGLISH_STOP_WORDS).generate(wordcloud_text)
-                    plt.figure(figsize=(10, 5))
-                    plt.imshow(wordcloud, interpolation='bilinear')
-                    plt.axis('off')
-                    st.pyplot(plt)
+
+                    if wordcloud_text.strip():  # Ensure there is text to generate the wordcloud
+                        wordcloud = WordCloud(width=800, height=400, stopwords=ENGLISH_STOP_WORDS).generate(wordcloud_text)
+                        plt.figure(figsize=(10, 5))
+                        plt.imshow(wordcloud, interpolation='bilinear')
+                        plt.axis('off')
+                        st.pyplot(plt)
+                    else:
+                        st.write("No text available to generate the word cloud.")
 
                     st.write('')
                     st.write('')
@@ -117,15 +132,19 @@ def main():
                     # Barplot for stock mentions
                     st.subheader('📊 Stock Mentions Total')
                     stock_mentions = df['mentioned_stocks'].value_counts()
-                    fig3 = px.bar(stock_mentions, x=stock_mentions.index, y=stock_mentions.values, labels={'x': 'Stock', 'y': 'Mentions'}, title='Total Mentions by Stock')
+
+                    # Convert stock_mentions to a DataFrame
+                    stock_mentions_df = stock_mentions.reset_index()
+                    stock_mentions_df.columns = ['Stock', 'Mentions']
+                    
+                    fig3 = px.bar(stock_mentions_df, x='Stock', y='Mentions', labels={'Stock': 'Stock', 'Mentions': 'Mentions'}, title='Total Mentions by Stock')
                     st.plotly_chart(fig3)
                     st.divider()
                     st.caption("Analysis by Matilde Bernocchi, Carlos Varela, Rafael Braga and Elena Ginebra")
                     st.caption('💰 Good luck investing!')
-                    
 
         except (sqlite3.OperationalError, pd.io.sql.DatabaseError) as e:
-            st.warning("Database not found. Waiting for the database to be created...")
+            error_placeholder.warning("Database not found. Waiting for the database to be created...")
 
         # Please wait before next update
         time.sleep(5)
